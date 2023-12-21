@@ -19,7 +19,7 @@ COPY uwsgi.ini /etc/uwsgi/
 COPY supervisord.conf /etc/supervisor/conf.d/
 
 WORKDIR /app
-
+ADD "https://www.random.org/cgi-bin/randbyte?nbytes=10&format=h" skipcache
 COPY * /app/
 
 EXPOSE 9090

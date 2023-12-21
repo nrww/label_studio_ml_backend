@@ -1,6 +1,19 @@
 version: "3.8"
 
 services:
+  label-studio:
+    image: heartexlabs/label-studio:latest
+    ports:
+      - 8080:8080
+    volumes:
+      - /home/nrww/cats:/label-studio/files
+      - /home/nrww/mydata:/label-studio/data
+    environment:
+      - LABEL_STUDIO_LOCAL_FILES_SERVING_ENABLED=true
+      - LABEL_STUDIO_LOCAL_FILES_DOCUMENT_ROOT=/label-studio/files
+    networks:
+      - network1
+      
   redis:
     image: redis:alpine
     container_name: redis
@@ -9,6 +22,7 @@ services:
       - "./data/redis:/data"
     expose:
       - 6379
+
   server:
     container_name: label-studio-ml
     build: .
@@ -19,8 +33,8 @@ services:
       - REDIS_HOST=redis
       - REDIS_PORT=6379
       - LABEL_STUDIO_USE_REDIS=true
-      - MODEL_DIR = '/data/models'
-
+      - LABEL_URL=http://label-studio:8080
+      - LABEL_API=4f08352b46d3b1798d948cd6c279fda247f4d433
     ports:
       - 9090:9090
     depends_on:
@@ -30,3 +44,9 @@ services:
     volumes:
       - "./data/server:/data"
       - "./logs:/tmp"
+    networks:
+      - network1
+networks:
+  network1:
+    driver: "bridge"
+    external: false

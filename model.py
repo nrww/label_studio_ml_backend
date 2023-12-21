@@ -9,9 +9,8 @@ from label_studio_ml.model import LabelStudioMLBase
 from label_studio_ml.utils import get_single_tag_keys, get_local_path
 
 # URL with host
-# LS_URL =  "http://127.0.0.1:8080"
-LS_URL = "http://192.168.100.3:8080"
-LS_API_TOKEN = "your api token"
+LS_URL =  os.environ["LABEL_URL"]
+LS_API_TOKEN = os.environ["LABEL_API"]
 
 
 # Initialize class inhereted from LabelStudioMLBase
@@ -22,10 +21,24 @@ class YOLOv8Model(LabelStudioMLBase):
 
         # Initialize self variables
         self.from_name, self.to_name, self.value, self.classes = get_single_tag_keys(
-            self.parsed_label_config, 'PolygonLabels', 'Image')
-        self.labels = ['capsules', 'tablets']
+            self.parsed_label_config, 'RectangleLabels', 'Image')
+        self.labels = ['person', 'bicycle', 'car', 'motorcycle', 'airplane', 'bus', 
+                       'train', 'truck', 'boat', 'traffic light', 'fire hydrant', 
+                       'stop sign', 'parking meter', 'bench', 'bird', 'cat', 'dog', 
+                       'horse', 'sheep', 'cow', 'elephant', 'bear', 'zebra', 'giraffe', 
+                       'backpack', 'umbrella', 'handbag', 'tie', 'suitcase', 'frisbee', 
+                       'skis', 'snowboard', 'sports ball', 'kite', 'baseball bat', 
+                       'baseball glove', 'skateboard', 'surfboard', 'tennis racket', 
+                       'bottle', 'wine glass', 'cup', 'fork', 'knife', 'spoon', 'bowl', 
+                       'banana', 'apple', 'sandwich', 'orange', 'broccoli', 'carrot', 
+                       'hot dog', 'pizza', 'donut', 'cake', 'chair', 'couch', 'potted plant', 
+                       'bed', 'dining table', 'toilet', 'tv', 'laptop', 'mouse', 'remote', 
+                       'keyboard', 'cell phone', 'microwave', 'oven', 'toaster', 'sink', 
+                       'refrigerator', 'book', 'clock', 'vase', 'scissors', 'teddy bear', 
+                       'hair drier', 'toothbrush']
+
         # Load model
-        self.model = YOLO("best.pt")
+        self.model = YOLO("yolov8l.pt")
 
     # Function to predict
     def predict(self, tasks, **kwargs):
@@ -53,31 +66,39 @@ class YOLOv8Model(LabelStudioMLBase):
         predictions = []
         score = 0
         
-
         # Getting prediction using model
-        results = self.model.predict(image)
-        
+        results = self.model.predict(image, imgsz=(original_height, original_width))       
 
         # Getting mask segments, boxes from model prediction
         for result in results:
-            for i, (box, segm) in enumerate(zip(result.boxes, result.masks.segments)):
-                
-                # 2D array with poligon points 
-                polygon_points = (segm * 100).tolist()
+            for i, box in enumerate(result.boxes):
+                #XYXY
+                x_min, y_min, x_max, y_max = box.xyxy.tolist()[0]
+
+                x = x_min * 100.0 / original_width
+                y = y_min * 100.0 / original_height
+                width = (x_max - x_min) * 100.0 / original_width
+                height = (y_max - y_min) * 100.0 / original_height
 
                 # Adding dict to prediction
                 predictions.append({
                     "from_name" : self.from_name,
                     "to_name" : self.to_name,
                     "id": str(i),
-                    "type": "polygonlabels",
+                    "type": "rectanglelabels",
                     "score": box.conf.item(),
                     "original_width": original_width,
                     "original_height": original_height,
                     "image_rotation": 0,
                     "value": {
-                        "points": polygon_points,
-                        "polygonlabels": [self.labels[int(box.cls.item())]]
+                        "x": x,
+                        "y": y,
+                        "width": width,
+                        "height": height,
+                        "rotation": 0,
+                        "rectanglelabels": [
+                            self.labels[int(box.cls.item())]
+                        ]
                     }})
 
                 # Calculating score
